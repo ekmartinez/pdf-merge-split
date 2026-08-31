@@ -2,8 +2,21 @@ import os
 from pdf2docx import Converter
 from pypdf import PdfReader, PdfWriter
 
+
 class PDFOperations:
+    """
+    A collection of common PDF manipulation operations.
+
+    Supports selecting PDF files, extracting pages, merging files,
+    deleting pages, inserting pages from one PDF into another,
+    rotating pages, and converting PDF content to Word (.docx) files.
+
+    Page numbers passed to any method in this class are 1-based
+    unless otherwise noted.
+    """
+
     def __init__(self):
+        """Initialize the operations handler with an empty file selection."""
         self.pdf_paths = []
 
     def select_pdf_files(self, paths):
@@ -12,9 +25,8 @@ class PDFOperations:
 
         :param paths: A single path or a list of paths to PDF files.
         """
-
         if isinstance(paths, str):
-            paths = [paths] # Convert to list if a single path is provided
+            paths = [paths]  # Convert to list if a single path is provided
         for path in paths:
             if os.path.isfile(path) and path.lower().endswith('.pdf'):
                 self.pdf_paths.append(path)
@@ -23,7 +35,7 @@ class PDFOperations:
 
     def get_selected_files(self):
         """
-        Get the list of slected PDF file paths.
+        Get the list of selected PDF file paths.
 
         :return: List of selected PDF file paths.
         """
@@ -31,12 +43,12 @@ class PDFOperations:
 
     def extract_pdf_pages(self, pdf_path, page_specifications, output_filename):
         """
-            Extract specific pages from a PDF file.
+        Extract specific pages from a PDF file.
 
-            :param pdf_path: Path to the PDF file.
-            :param page specification: A single page number, a range (e.g., "1-5"), or a list of pages)
-            :param output_filename: Filename to save the extracted pages
-            :return: A PdfWriter object containing the extracted pages.
+        :param pdf_path: Path to the PDF file.
+        :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages.
+        :param output_filename: Filename to save the extracted pages.
+        :return: A PdfWriter object containing the extracted pages.
         """
         if pdf_path not in self.pdf_paths:
             print(f"PDF file {pdf_path} is not selected.")
@@ -48,7 +60,7 @@ class PDFOperations:
                 total_pages = len(reader.pages)
 
                 # Process the page specifications
-                pages_to_extract = set() # Use a set to avoid duplicates
+                pages_to_extract = set()  # Use a set to avoid duplicates
 
                 if isinstance(page_specifications, int):
                     # Single page
@@ -60,7 +72,7 @@ class PDFOperations:
                     # Range of pages
                     if '-' in page_specifications:
                         start, end = map(int, page_specifications.split('-'))
-                        for page in range(start - 1, end): # Convert to 0-indexed
+                        for page in range(start - 1, end):  # Convert to 0-indexed
                             if 0 <= page < total_pages:
                                 pages_to_extract.add(page)
                             else:
@@ -70,7 +82,8 @@ class PDFOperations:
                         page_number = int(page_specifications)
                         if 1 <= page_number <= total_pages:
                             pages_to_extract.add(page_number - 1)
-
+                        else:
+                            print(f"Page number {page_number} is out of range for {pdf_path}.")
                 elif isinstance(page_specifications, list):
                     # List of pages
                     for page_number in page_specifications:
@@ -78,6 +91,7 @@ class PDFOperations:
                             pages_to_extract.add(page_number - 1)
                         else:
                             print(f"Page number {page_number} is out of range for {pdf_path}.")
+
                 # Add the valid pages to the writer
                 for page in sorted(pages_to_extract):
                     extracted_writer.add_page(reader.pages[page])
@@ -90,20 +104,19 @@ class PDFOperations:
 
             return extracted_writer
         except Exception as e:
-            print(f"An error occured while extracting pages: {e}")
+            print(f"An error occurred while extracting pages: {e}")
             return None
-    
+
     def merge_pdf_files(self, output_filename):
         """
-        Merge multiple PDF files into a single PDF file.
+        Merge all selected PDF files into a single PDF file.
 
-
-        :param output_filename: The filename of the merged PDF 
+        :param output_filename: The filename of the merged PDF.
         """
         if not self.pdf_paths:
             print("No PDF files selected for merging.")
             return
-        
+
         merged_writer = PdfWriter()
         try:
             for pdf_path in self.pdf_paths:
@@ -112,23 +125,24 @@ class PDFOperations:
                     for page in reader.pages:
                         merged_writer.add_page(page)
 
-                with open(output_filename, 'wb') as output_file:
-                    merged_writer.write(output_file)
-                print(f"Merged PDF saved as {output_filename}")
+            # Write once, after all selected files have been added
+            with open(output_filename, 'wb') as output_file:
+                merged_writer.write(output_file)
+            print(f"Merged PDF saved as {output_filename}")
         except Exception as e:
-            print(f"An error occurred while mergin PDF files: {e}")
-    
+            print(f"An error occurred while merging PDF files: {e}")
+
     def delete_pdf_pages(self, pdf_path, page_specifications):
         """
-            Delete specific pages from a PDF file and overwrite the original file.
+        Delete specific pages from a PDF file and overwrite the original file.
 
-            :param pdf_path: Path to the PDF file.
-            :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages (1-based indexing).
+        :param pdf_path: Path to the PDF file.
+        :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages (1-based indexing).
         """
         if pdf_path not in self.pdf_paths:
             print(f"PDF file {pdf_path} is not selected.")
             return None
-        
+
         modified_writer = PdfWriter()
         try:
             with open(pdf_path, 'rb') as file:
@@ -136,35 +150,35 @@ class PDFOperations:
                 total_pages = len(reader.pages)
 
                 # Process the page specifications
-                pages_to_delete = set() # Use a set to avoid duplicates
+                pages_to_delete = set()  # Use a set to avoid duplicates
 
                 if isinstance(page_specifications, int):
                     # Single page (1-based)
                     if 1 <= page_specifications <= total_pages:
-                        pages_to_delete.add(page_specifications - 1) # Convert to 0-indexed
+                        pages_to_delete.add(page_specifications - 1)  # Convert to 0-indexed
                     else:
-                        print(f"Page number {page_specifications} is out of range of {pdf_path}.")
+                        print(f"Page number {page_specifications} is out of range for {pdf_path}.")
                 elif isinstance(page_specifications, str):
                     # Range of pages (1-based)
                     if '-' in page_specifications:
                         start, end = map(int, page_specifications.split('-'))
-                        for page in range(start - 1, end): # Convert start to 0-indexed
+                        for page in range(start - 1, end):  # Convert start to 0-indexed
                             if 0 <= page < total_pages:
                                 pages_to_delete.add(page)
                             else:
                                 print(f"Page number {page + 1} is out of range for {pdf_path}.")
                     else:
-                        # Single page is string (1-based)
+                        # Single page as string (1-based)
                         page_number = int(page_specifications)
                         if 1 <= page_number <= total_pages:
-                            pages_to_delete.add(page_number -1) # Convert to 0-indexed
+                            pages_to_delete.add(page_number - 1)  # Convert to 0-indexed
                         else:
                             print(f"Page number {page_number} is out of range for {pdf_path}.")
                 elif isinstance(page_specifications, list):
-                     # List of pages (1-based)
+                    # List of pages (1-based)
                     for page_number in page_specifications:
                         if 1 <= page_number <= total_pages:
-                            pages_to_delete.add(page_number - 1) # Convert to 0-indexed
+                            pages_to_delete.add(page_number - 1)  # Convert to 0-indexed
                         else:
                             print(f"Page number {page_number} is out of range for {pdf_path}.")
 
@@ -172,7 +186,7 @@ class PDFOperations:
                 for page in range(total_pages):
                     if page not in pages_to_delete:
                         modified_writer.add_page(reader.pages[page])
-            
+
             # Overwrite the original PDF file with the modified content
             with open(pdf_path, 'wb') as output_file:
                 modified_writer.write(output_file)
@@ -227,83 +241,85 @@ class PDFOperations:
                         modified_writer.write(output_file)
                     print(f"Inserted page {page_number} from {source_pdf_path} into {target_pdf_path} at position {insert_position}.")
                 else:
-                    print(f"Invalid page number or insert position.")
+                    print("Invalid page number or insert position.")
         except Exception as e:
             print(f"An error occurred while inserting pages: {e}")
             return None
 
     def rotate_pdf_pages(self, pdf_path, page_specifications, angle):
-            """
-            Rotate specific pages in a PDF file by a given angle.
+        """
+        Rotate specific pages in a PDF file by a given angle.
 
-            :param pdf_path: Path to the PDF file.
-            :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages (1-based indexing).
-            :param angle: The angle to rotate the pages (90, 180, or 270 degrees).
-            """
-            if pdf_path not in self.pdf_paths:
-                print(f"PDF file {pdf_path} is not selected.")
-                return None
-            
-            if angle not in [90, 180, 270]:
-                print("Invalid angle. Please use 90, 180, or 270 degrees.")
-                return None
+        :param pdf_path: Path to the PDF file.
+        :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages (1-based indexing).
+        :param angle: The angle to rotate the pages (90, 180, or 270 degrees).
+        """
+        if pdf_path not in self.pdf_paths:
+            print(f"PDF file {pdf_path} is not selected.")
+            return None
 
-            modified_writer = PdfWriter()
-            try:
-                with open(pdf_path, 'rb') as file:
-                    reader = PdfReader(file)
-                    total_pages = len(reader.pages)
+        if angle not in [90, 180, 270]:
+            print("Invalid angle. Please use 90, 180, or 270 degrees.")
+            return None
 
-                    # Process the page specifications
-                    pages_to_rotate = set()
+        modified_writer = PdfWriter()
+        try:
+            with open(pdf_path, 'rb') as file:
+                reader = PdfReader(file)
+                total_pages = len(reader.pages)
 
-                    if isinstance(page_specifications, int):
-                        if 1 <= page_specifications <= total_pages:
-                            pages_to_rotate.add(page_specifications - 1)  # Convert to 0-indexed
-                        else:
-                            print(f"Page number {page_specifications} is out of range for {pdf_path}.")
-                    elif isinstance(page_specifications, str):
-                        if '-' in page_specifications:
-                            start, end = map(int, page_specifications.split('-'))
-                            for page in range(start - 1, end):  # Convert to 0-indexed
-                                if 0 <= page < total_pages:
-                                    pages_to_rotate.add(page)
-                                else:
-                                    print(f"Page number {page + 1} is out of range for {pdf_path}.")
-                        else:
-                            page_number = int(page_specifications)
-                            if 1 <= page_number <= total_pages:
-                                pages_to_rotate.add(page_number - 1)  # Convert to 0-indexed
+                # Process the page specifications
+                pages_to_rotate = set()
 
-                    elif isinstance(page_specifications, list):
-                        for page_number in page_specifications:
-                            if 1 <= page_number <= total_pages:
-                                pages_to_rotate.add(page_number - 1)  # Convert to 0-indexed
+                if isinstance(page_specifications, int):
+                    if 1 <= page_specifications <= total_pages:
+                        pages_to_rotate.add(page_specifications - 1)  # Convert to 0-indexed
+                    else:
+                        print(f"Page number {page_specifications} is out of range for {pdf_path}.")
+                elif isinstance(page_specifications, str):
+                    if '-' in page_specifications:
+                        start, end = map(int, page_specifications.split('-'))
+                        for page in range(start - 1, end):  # Convert to 0-indexed
+                            if 0 <= page < total_pages:
+                                pages_to_rotate.add(page)
                             else:
-                                print(f"Page number {page_number} is out of range for {pdf_path}.")
+                                print(f"Page number {page + 1} is out of range for {pdf_path}.")
+                    else:
+                        page_number = int(page_specifications)
+                        if 1 <= page_number <= total_pages:
+                            pages_to_rotate.add(page_number - 1)  # Convert to 0-indexed
+                        else:
+                            print(f"Page number {page_number} is out of range for {pdf_path}.")
+                elif isinstance(page_specifications, list):
+                    for page_number in page_specifications:
+                        if 1 <= page_number <= total_pages:
+                            pages_to_rotate.add(page_number - 1)  # Convert to 0-indexed
+                        else:
+                            print(f"Page number {page_number} is out of range for {pdf_path}.")
 
-                    # Add pages to the writer, rotating specified pages
-                    for page in range(total_pages):
-                        if page in pages_to_rotate:
-                            reader.pages[page].rotate_clockwise(angle)  # Rotate the page
-                        modified_writer.add_page(reader.pages[page])
+                # Add pages to the writer, rotating specified pages
+                for page in range(total_pages):
+                    if page in pages_to_rotate:
+                        reader.pages[page].rotate(angle)  # Rotate the page (rotate_clockwise is deprecated)
+                    modified_writer.add_page(reader.pages[page])
 
-                # Overwrite the original PDF file with the modified content
-                with open(pdf_path, 'wb') as output_file:
-                    modified_writer.write(output_file)
-                print(f"Rotated specified pages in {pdf_path} by {angle} degrees.")
-                return modified_writer
-            except Exception as e:
-                print(f"An error occurred while rotating pages: {e}")
-                return None
+            # Overwrite the original PDF file with the modified content
+            with open(pdf_path, 'wb') as output_file:
+                modified_writer.write(output_file)
+            print(f"Rotated specified pages in {pdf_path} by {angle} degrees.")
+            return modified_writer
+        except Exception as e:
+            print(f"An error occurred while rotating pages: {e}")
+            return None
 
     def convert_pdf_to_word(self, pdf_path, docx_path, page_specifications=None):
         """
-        Convert a PDF file to a Word document.
+        Convert a PDF file (or specific pages of it) to a Word document.
 
         :param pdf_path: Path to the PDF file to convert.
         :param docx_path: Path to save the converted Word document.
-        :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages (1-based indexing).
+        :param page_specifications: A single page number, a range (e.g., "1-5"), or a list of pages
+            (1-based indexing). If None, the entire document is converted.
         """
         if pdf_path not in self.pdf_paths:
             print(f"PDF file {pdf_path} is not selected.")
@@ -336,7 +352,8 @@ class PDFOperations:
                         page_number = int(page_specifications)
                         if 1 <= page_number <= len(cv.pages):
                             pages_to_convert.append(page_number - 1)  # Convert to 0-indexed
-
+                        else:
+                            print(f"Page number {page_number} is out of range for {pdf_path}.")
                 elif isinstance(page_specifications, list):
                     for page_number in page_specifications:
                         if 1 <= page_number <= len(cv.pages):
@@ -354,22 +371,23 @@ class PDFOperations:
             print(f"An error occurred while converting PDF to Word: {e}")
             return None
 
+
 if __name__ == "__main__":
     pdf_operations = PDFOperations()
     pdf_operations.select_pdf_files(['ISC_Notes.pdf'])
 
     # ----------------------------------------------------------------------
-    # EXTRACT 
+    # EXTRACT
     # ----------------------------------------------------------------------
 
     # Extract a single page
-    #extracted_writer_single = pdf_operations.extract_pdf_pages('Maths.pdf', 2, "extracted.pdf")
-    
-    # Extract a range pages and save
-    #extracted_writer_single = pdf_operations.extract_pdf_pages('Maths.pdf', "1-5", "extracted.pdf")
+    # extracted_writer_single = pdf_operations.extract_pdf_pages('Maths.pdf', 2, "extracted.pdf")
 
-    # Extract non-contigeous
-    #extracted_writer_single = pdf_operations.extract_pdf_pages('Maths.pdf', [1, 3, 5], "extracted.pdf")
+    # Extract a range of pages and save
+    # extracted_writer_single = pdf_operations.extract_pdf_pages('Maths.pdf', "1-5", "extracted.pdf")
+
+    # Extract non-contiguous pages
+    # extracted_writer_single = pdf_operations.extract_pdf_pages('Maths.pdf', [1, 3, 5], "extracted.pdf")
 
     # ----------------------------------------------------------------------
     # MERGE
@@ -381,25 +399,22 @@ if __name__ == "__main__":
     # DELETE
     # ----------------------------------------------------------------------
 
-    # Delete a single page from the original file (1-based)
+    # Delete pages from the original file (1-based)
     # pdf_operations.delete_pdf_pages('merged_output.pdf', [1, 3, 5])
-    
+
     # Delete a single page from the original file (1-based)
     # pdf_operations.delete_pdf_pages('file1.pdf', 1)
 
     # Delete a range of pages from the original file (1-based)
     # pdf_operations.delete_pdf_pages('file1.pdf', "1-5")
 
-    # Delete non-contiguous pages from the original file (1-based)
-    # pdf_operations.delete_pdf_pages('file1.pdf', [1, 3, 5])
-    
     # ----------------------------------------------------------------------
     # INSERT
     # ----------------------------------------------------------------------
 
     # Insert a page from file2.pdf into merged_output.pdf
     # pdf_operations.insert_into_pdf('merged_output.pdf', 'file2.pdf', 1, 2)  # Insert page 1 from file2.pdf at position 2 in merged_output.pdf
-    
+
     # ----------------------------------------------------------------------
     # ROTATE
     # ----------------------------------------------------------------------
@@ -412,7 +427,7 @@ if __name__ == "__main__":
 
     # Rotate non-contiguous pages in merged_output.pdf
     # pdf_operations.rotate_pdf_pages('merged_output.pdf', [1, 3], 270)
-    
+
     # ----------------------------------------------------------------------
     # Convert PDF document to Word
     # ----------------------------------------------------------------------
@@ -424,5 +439,3 @@ if __name__ == "__main__":
 
     # Convert non-contiguous pages
     # pdf_operations.convert_pdf_to_word('file1.pdf', 'file1_selected.docx', page_specifications=[1, 3, 5])
-    
-
